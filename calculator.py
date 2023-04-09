@@ -5,6 +5,7 @@ console = Console()
 
 # Define constants
 TOKENS_PER_K_WORDS = 1000 / 750  # 1k tokens is equivalent to ~750 words
+MONTHLY_MESSAGES = messages_per_day * 24 * 30
 
 # Define functions to calculate cost
 def calculate_cost(model, prompt_size, tokens_per_month):
@@ -65,8 +66,3 @@ def calculate_cost(model, prompt_size, tokens_per_month):
 
 # Create CLI app with typer
 app = typer.Typer()
-
-@app.command()
-def calculate_costs(model: str, prompt_size: int, messages_per_day: int):
-    tokens_per_month
-    
