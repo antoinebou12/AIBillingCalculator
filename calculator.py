@@ -66,3 +66,20 @@ def calculate_cost(model, prompt_size, tokens_per_month):
 
 # Create CLI app with typer
 app = typer.Typer()
+
+@app.command()
+def calculate_costs(lower_bound_prompt_size: int = LOWER_BOUND_PROMPT_SIZE, 
+                    upper_bound_prompt_size: int = UPPER_BOUND_PROMPT_SIZE, 
+                    messages_per_day: int = 25):
+    console.print("Calculating costs for different models...", style="bold magenta")
+
+    for model in ["gpt4_8k", "gpt4_32k", "chat_gpt", "ada", "babbage", "curie", "davinci",
+                  "embedding_ada", "embedding_curie", "image_1024", "image_512", "image_256", "whisper"]:
+        cost_lower_bound = calculate_cost(model, lower_bound_prompt_size, MONTHLY_MESSAGES)
+        cost_upper_bound = calculate_cost(model, upper_bound_prompt_size, MONTHLY_MESSAGES)
+
+        if cost_lower_bound is not None and cost_upper_bound is not None:
+            console.print(f"Model: {model}", style="bold")
+            console.print(f"Lower bound cost: ${cost_lower_bound:.2f}")
+            console.print(f"Upper bound cost: ${cost_upper_bound:.2f}")
+            console.print("\n")
