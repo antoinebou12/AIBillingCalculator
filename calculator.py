@@ -64,6 +64,22 @@ def calculate_cost(model, prompt_size, tokens_per_month):
         return None
     return cost
 
+# Define functions to calculate cost
+def calculate_cost_ai21(model, prompt_size, tokens_per_month):
+    if model == "jumbo":
+        price_per_token = 0.015
+    elif model == "grande":
+        price_per_token = 0.01
+    elif model == "large":
+        price_per_token = 0.003
+    else:
+        console.print("Invalid model. Please choose a valid model.", style="bold red")
+        return None
+    
+    tokens_per_prompt = prompt_size * TOKENS_PER_K_WORDS
+    cost = tokens_per_month * tokens_per_prompt * price_per_token / 1000
+    return cost
+
 # Create CLI app with typer
 app = typer.Typer()
 
