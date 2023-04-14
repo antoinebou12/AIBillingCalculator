@@ -1,6 +1,10 @@
 # AIBillingCalculator
 The AIBillingCalculator is a command-line tool that calculates the cost of using different OpenAI language models, based on the number of messages, prompt size, and pricing for each model.
 
+This script calculates the cost of using different AI models from OpenAI and AI21 Labs for a given prompt size and number of messages per day. It has the option to export the calculated costs to a CSV file. The script also defines a function to calculate the total cost for using Task-Specific APIs like Paraphrase, Summarize, Grammatical Error Corrections, Text Improvements, Text Segmentation, and Contextual Answers.
+
+The script imports necessary libraries, defines some constants, and functions to calculate the cost for different models. There is also a command-line interface (CLI) created using Typer to allow the user to input custom parameters for calculating costs. Finally, the script exports the calculated costs to a CSV file or a Pandas DataFrame.
+
 ## Installation
 To use the ChatGPTBillingCalculator, you will need to have Python 3.x installed on your system. You can install the required dependencies by running the following command in your terminal:
 

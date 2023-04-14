@@ -22,13 +22,18 @@ app = typer.Typer()
 TOKENS_PER_K_WORDS = 1000 / 750  # 1k tokens is equivalent to ~750 words
 MESSAGES_PER_DAY = 25
 MONTHLY_MESSAGES = MESSAGES_PER_DAY * 24 * 30
-LOWER_BOUND_PROMPT_SIZE = 1  # 1k words
-UPPER_BOUND_PROMPT_SIZE = 10  # 10k words
+LOWER_BOUND_PROMPT_SIZE = 200
+UPPER_BOUND_PROMPT_SIZE = 500
 TOKENS_PER_MESSAGE = 1000
 TOKENS_LIMIT = 4000
 
+def generate_prompt_from_size_in_tokens(size_in_tokens):
+    return "".join("a" for _ in range(1, size_in_tokens))
 
-def word_to_token(word):
+def generate_prompt_from_size_in_words(size_in_words):
+    return "".join("a" * 4 for _ in range(1, size_in_words))
+
+def word_to_token_size(word, model="gpt-4"):
     """
     Convert a word to the number of tokens it would take to generate it.
 
@@ -42,8 +47,8 @@ def word_to_token(word):
     tokens : int
         The number of tokens it would take to generate the word.
     """
-    return len(tiktoken.encoding_for_model("gpt-4").encode(word))
-
+    # 1 token ~= 4 chars in English
+    return len(str(word)) / 4
 
 # Define functions to calculate cost
 def calculate_cost(model, prompt_size, tokens_per_month):
@@ -71,7 +76,7 @@ def calculate_cost(model, prompt_size, tokens_per_month):
     if model == "gpt4_8k":
         price_per_token_prompt = 0.03
         price_per_token_completion = 0.06
-        tokens_per_prompt = prompt_size * TOKENS_PER_K_WORDS
+        tokens_per_prompt = word_to_token_size(generate_prompt_from_size_in_tokens(prompt_size))
         tokens_per_completion = tokens_per_prompt
         cost = (
             tokens_per_month * tokens_per_prompt * price_per_token_prompt
@@ -80,7 +85,7 @@ def calculate_cost(model, prompt_size, tokens_per_month):
     elif model == "gpt4_32k":
         price_per_token_prompt = 0.06
         price_per_token_completion = 0.12
-        tokens_per_prompt = prompt_size * TOKENS_PER_K_WORDS
+        tokens_per_prompt = word_to_token_size(generate_prompt_from_size_in_tokens(prompt_size))
         # GPT-4 32K has 4x the completion response tokens
         tokens_per_completion = tokens_per_prompt * 4
         cost = (
@@ -89,7 +94,7 @@ def calculate_cost(model, prompt_size, tokens_per_month):
         ) / 1000
     elif model == "chat_gpt":
         price_per_token = 0.002
-        tokens_per_prompt = prompt_size * TOKENS_PER_K_WORDS
+        tokens_per_prompt = word_to_token_size(generate_prompt_from_size_in_tokens(prompt_size))
         cost = tokens_per_month * tokens_per_prompt * price_per_token / 1000
     elif model in ["ada", "babbage", "curie", "davinci"]:
         if model == "ada":
@@ -163,7 +168,7 @@ def calculate_cost_ai21(model, prompt_size, tokens_per_month):
         console.print("Invalid model. Please choose a valid model.", style="bold red")
         return None
 
-    tokens_per_prompt = prompt_size * TOKENS_PER_K_WORDS
+    tokens_per_prompt = word_to_token_size(generate_prompt_from_size_in_tokens(prompt_size))
     return tokens_per_month * tokens_per_prompt * price_per_token / 1000
 
 
@@ -294,11 +299,61 @@ def export_cost_to_df(file=None):
         df.to_csv(file, index=False)
     return df
 
+def calculate_api_billing(
+    paraphrase_requests: int = 0,
+    summarize_requests: int = 0,
+    grammar_correction_requests: int = 0,
+    text_improvement_requests: int = 0,
+    text_segmentation_requests: int = 0,
+    contextual_answers_requests: int = 0,
+) -> float:
+    """
+    Calculate the total cost for using Task-Specific APIs.
+
+    Parameters
+    ----------
+    paraphrase_requests : int, optional
+        Number of Paraphrase API requests, default is 0.
+    summarize_requests : int, optional
+        Number of Summarize API requests, default is 0.
+    grammar_correction_requests : int, optional
+        Number of Grammatical Error Corrections API requests, default is 0.
+    text_improvement_requests : int, optional
+        Number of Text Improvements API requests, default is 0.
+    text_segmentation_requests : int, optional
+        Number of Text Segmentation API requests, default is 0.
+    contextual_answers_requests : int, optional
+        Number of Contextual Answers API requests, default is 0.
+
+    Returns
+    -------
+    float
+        Total cost for using the APIs.
+    """
+    COSTS = {
+        "paraphrase": 0.001,
+        "summarize": 0.005,
+        "grammar_correction": 0.0005,
+        "text_improvement": 0.0005,
+        "text_segmentation": 0.001,
+        "contextual_answers": 0.005,
+    }
+
+    return (
+        paraphrase_requests * COSTS["paraphrase"]
+        + summarize_requests * COSTS["summarize"]
+        + grammar_correction_requests * COSTS["grammar_correction"]
+        + text_improvement_requests * COSTS["text_improvement"]
+        + text_segmentation_requests * COSTS["text_segmentation"]
+        + contextual_answers_requests * COSTS["contextual_answers"]
+    )
+
 @app.command()
 def calculate_costs(
     lower_bound_prompt_size: int = LOWER_BOUND_PROMPT_SIZE,
     upper_bound_prompt_size: int = UPPER_BOUND_PROMPT_SIZE,
-    messages_per_day: int = 25,
+    messages_per_day: int = MESSAGES_PER_DAY,
+    monthly_messages: int = MONTHLY_MESSAGES
 ):
     """
     Calculate the cost of using OpenAI and AI21 models for a given prompt size and number of messages per day.
@@ -334,10 +389,10 @@ def calculate_costs(
         "whisper",
     ]:
         cost_lower_bound = calculate_cost(
-            model, lower_bound_prompt_size, MONTHLY_MESSAGES
+            model, lower_bound_prompt_size, monthly_messages
         )
         cost_upper_bound = calculate_cost(
-            model, upper_bound_prompt_size, MONTHLY_MESSAGES
+            model, upper_bound_prompt_size, monthly_messages
         )
 
         if cost_lower_bound is not None and cost_upper_bound is not None:
@@ -346,6 +401,7 @@ def calculate_costs(
             console.print(f"Upper bound cost: ${cost_upper_bound:.2f}")
             console.print("\n")
 
+        export_cost_to_csv(file="costs.csv")
 
 if __name__ == "__main__":
     app()

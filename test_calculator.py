@@ -5,10 +5,25 @@ import pytest
 from calculator import *
 import os
 
-def test_word_to_token():
-    assert word_to_token("Hello") == 1
-    assert word_to_token("world") == 1
-    assert word_to_token("Hello World") == 2
+# Tests for word_to_token_size function
+def test_word_to_token_size():
+    word = "hello"
+    token_count = word_to_token_size(word)
+
+    # GPT-4 tokenizes "hello" as a single token
+    assert token_count == 1
+
+    word = "chatbot"
+    token_count = word_to_token_size(word)
+
+    # GPT-4 tokenizes "chatbot" as a single token
+    assert token_count == 1
+
+    word = "conversational"
+    token_count = word_to_token_size(word)
+
+    # GPT-4 tokenizes "conversational" as two tokens
+    assert token_count == 2
 
 def test_calculate_cost():
     # round to 2 decimal places
@@ -123,3 +138,51 @@ def test_calculate_costs(capsys):
     assert "Model: gpt4_8k" in captured.out
     assert "Model: davinci" in captured.out
     assert "Model: image_256" in captured.out
+
+
+def test_calculate_api_billing():
+    # Test with default values (all zero requests)
+    assert calculate_api_billing() == 0
+
+    # Test with various API request quantities
+    assert calculate_api_billing(paraphrase_requests=1000) == 1
+    assert calculate_api_billing(summarize_requests=1000) == 5
+    assert calculate_api_billing(grammar_correction_requests=1000) == 0.5
+    assert calculate_api_billing(text_improvement_requests=1000) == 0.5
+    assert calculate_api_billing(text_segmentation_requests=1000) == 1
+    assert calculate_api_billing(contextual_answers_requests=1000) == 5
+
+    # Test with a combination of API request quantities
+    total_cost = calculate_api_billing(
+        paraphrase_requests=1000,
+        summarize_requests=500,
+        grammar_correction_requests=2000,
+        text_improvement_requests=2000,
+        text_segmentation_requests=1000,
+        contextual_answers_requests=500,
+    )
+    assert total_cost == 9.0
+
+def test_export_cost_to_df(mock_calculate_cost, mock_calculate_cost_ai21):
+    df = export_cost_to_df()
+
+    # Check DataFrame structure
+    assert isinstance(df, pd.DataFrame)
+    assert list(df.columns) == ["Model", "Prompt Size (k words)", "Messages per Day", "Tokens per Month", "Cost per Month ($)"]
+
+    # Check row count
+    openai_models = 13
+    ai21_models = 3
+    prompt_sizes = UPPER_BOUND_PROMPT_SIZE
+    messages_per_day = 25
+    expected_row_count = (openai_models + ai21_models) * prompt_sizes * messages_per_day
+    assert len(df) == expected_row_count
+
+    # Check row content (use the mocked cost values)
+    openai_cost = 10.0
+    ai21_cost = 20.0
+    for _, row in df.iterrows():
+        if row['Model'] in ['jumbo', 'grande', 'large']:
+            assert row['Cost per Month ($)'] == ai21_cost
+        else:
+            assert row['Cost per Month ($)'] == openai_cost
