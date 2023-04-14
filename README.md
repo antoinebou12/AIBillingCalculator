@@ -1,5 +1,5 @@
-# ChatGPTBillingCalculator
-The ChatGPTBillingCalculator is a command-line tool that calculates the cost of using different OpenAI language models, based on the number of messages, prompt size, and pricing for each model.
+# AIBillingCalculator
+The AIBillingCalculator is a command-line tool that calculates the cost of using different OpenAI language models, based on the number of messages, prompt size, and pricing for each model.
 
 ## Installation
 To use the ChatGPTBillingCalculator, you will need to have Python 3.x installed on your system. You can install the required dependencies by running the following command in your terminal:
